@@ -29,6 +29,16 @@ app.use(passport.session())
 
 passport.use(new passportLocal.Strategy(function (username, password, done) {
   // Use mongo here
+  // User.findOne({ username: username }, function (err, user) {
+  //     if (err) { return done(err) }
+  //     if (!user) {
+  //       return done(null, false, { message: 'Incorrect username.' })
+  //     }
+  //     if (!user.validPassword(password)) {
+  //       return done(null, false, { message: 'Incorrect password.' })
+  //     }
+  //     return done(null, user)
+  //   })
   if (username === password) {
     done(null, {id: username, name: username})
   } else {
@@ -38,12 +48,15 @@ passport.use(new passportLocal.Strategy(function (username, password, done) {
 
 // Serialize user
 passport.serializeUser(function (user, done) {
-  done(user.id)
+  done(null, user.id)
 })
 
 passport.deserializeUser(function (id, done) {
   // query db or cache here
-  done({id: id, name: id})
+  // User.findById(id, function (err, user) {
+  //   done(err, user)
+  // })
+  done(null, {id: id, name: id})
 })
 
 // routes
@@ -59,6 +72,11 @@ app.get('/login', function (req, res) {
 })
 
 app.post('/login', passport.authenticate('local'), function (req, res) {
+  res.redirect('/')
+})
+
+app.get('/logout', function (req, res) {
+  req.logout()
   res.redirect('/')
 })
 
