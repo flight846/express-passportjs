@@ -9,10 +9,13 @@ var app = express()
 
 var passport = require('passport')
 var passportLocal = require('passport-local')
+var passportHttp = require('passport-http')
+// var localapi = require('passport-localapikey')
 
 // middlewares
 app.set('view engine', 'ejs')
 
+// configure middlewares
 app.use(logger('dev'))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
@@ -27,7 +30,11 @@ app.use(expressSession({
 app.use(passport.initialize())
 app.use(passport.session())
 
-passport.use(new passportLocal.Strategy(function (username, password, done) {
+passport.use(new passportLocal.Strategy(verifyAuthentication))
+
+passport.use(new passportHttp.BasicStrategy(verifyAuthentication))
+
+function verifyAuthentication (username, password, done) {
   // Use mongo here
   // User.findOne({ username: username }, function (err, user) {
   //     if (err) { return done(err) }
@@ -44,7 +51,7 @@ passport.use(new passportLocal.Strategy(function (username, password, done) {
   } else {
     done(null, null)
   }
-}))
+}
 
 // Serialize user
 passport.serializeUser(function (user, done) {
@@ -58,6 +65,15 @@ passport.deserializeUser(function (id, done) {
   // })
   done(null, {id: id, name: id})
 })
+
+// create our own authentication
+function ensureAuthenticated (req, res, next) {
+  if (req.isAuthenticated()) {
+    next()
+  } else {
+    res.send(403)
+  }
+}
 
 // routes
 app.get('/', function (req, res) {
@@ -78,6 +94,14 @@ app.post('/login', passport.authenticate('local'), function (req, res) {
 app.get('/logout', function (req, res) {
   req.logout()
   res.redirect('/')
+})
+
+// tell express to use passport BasicStrategy when calling api
+app.use('/api', passport.authenticate('basic'))
+
+// Authenticating api requests
+app.get('/api/data', ensureAuthenticated, function (req, res) {
+  res.json({message: 'Hello'})
 })
 
 var port = process.env.PORT || 3000
